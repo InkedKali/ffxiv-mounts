@@ -99,14 +99,10 @@
         </div>
     </div>
 
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     
     <script>
-        // ============================================
-        // DEINE FIREBASE CONFIG (bereits eingetragen!)
-        // ============================================
         const firebaseConfig = {
             apiKey: "AIzaSyANYJcKALE4skWvP70_qNOE5yyYhry94A0",
             authDomain: "static-tracker.firebaseapp.com",
@@ -116,7 +112,6 @@
             messagingSenderId: "335007041159",
             appId: "1:335007041159:web:7232ab4ef409499b815a22"
         };
-        // ============================================
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
@@ -133,14 +128,8 @@
 
         let allData = {};
 
-        function getData() {
-            return allData;
-        }
-
-        function saveToStorage(data) {
-            db.ref('mounts').set(data);
-        }
-
+        function getData() { return allData; }
+        function saveToStorage(data) { db.ref('mounts').set(data); }
         function initData() {
             db.ref('mounts').on('value', (snapshot) => {
                 allData = snapshot.val() || {};
@@ -217,22 +206,13 @@
 
         function renderList() {
             const data = getData();
-            
-            document.getElementById('tableHead').innerHTML = `
-                <tr>
-                    <th>Name</th>
-                    ${MOUNTS.map(m => `<th>${m.icon}<br>${m.trial}</th>`).join('')}
-                </tr>
-            `;
-            
+            document.getElementById('tableHead').innerHTML = `<tr><th>Name</th>${MOUNTS.map(m => `<th>${m.icon}<br>${m.trial}</th>`).join('')}</tr>`;
             const list = document.getElementById('membersList');
             list.innerHTML = Object.entries(data).map(([name, info]) => `
                 <tr>
                     <td class="clickable" onclick="loadPlayer('${name}')">${name}</td>
                     ${(info.mounts || []).map((m, i) => `
-                        <td class="${m && m.has ? 'got-mount' : ''}">
-                            ${!MOUNTS[i].released ? '-' : (m && m.has ? '✅' : `${(m && m.tokens) || 0}/99`)}
-                        </td>
+                        <td class="${m && m.has ? 'got-mount' : ''}">${!MOUNTS[i].released ? '-' : (m && m.has ? '✅' : `${(m && m.tokens) || 0}/99`)}</td>
                     `).join('')}
                 </tr>
             `).join('');
@@ -251,13 +231,18 @@
             }
 
             const mountStats = MOUNTS.filter(m => m.released).map((mount, i) => {
-                let need = 0;
-                let totalTokens = 0;
+                let need = 0, totalTokens = 0;
                 players.forEach(([name, info]) => {
                     const m = info.mounts && info.mounts[i];
-                    if (!m || !m.has) {
+                    const tokens = (m && m.tokens) || 0;
+                    const hasMount = m && m.has;
+                    
+                    // 99+ tokens = done (no more farming needed)
+                    const done = hasMount || tokens >= 99;
+                    
+                    if (!done) {
                         need++;
-                        totalTokens += (m && m.tokens) || 0;
+                        totalTokens += tokens;
                     }
                 });
                 return { ...mount, index: i, need, have: totalPlayers - need, avgTokens: need > 0 ? Math.round(totalTokens / need) : 0 };
@@ -265,10 +250,7 @@
 
             const sorted = [...mountStats].sort((a, b) => b.need - a.need);
             document.getElementById('mostNeeded').innerHTML = sorted.map(m => `
-                <div class="priority-item">
-                    <span>${m.icon} ${m.trial}</span>
-                    <span class="${m.need > totalPlayers/2 ? 'priority-high' : m.need > 0 ? 'priority-med' : 'priority-low'}">${m.need}/${totalPlayers} need it</span>
-                </div>
+                <div class="priority-item"><span>${m.icon} ${m.trial}</span><span class="${m.need > totalPlayers/2 ? 'priority-high' : m.need > 0 ? 'priority-med' : 'priority-low'}">${m.need}/${totalPlayers} need it</span></div>
             `).join('');
 
             document.getElementById('completionStatus').innerHTML = mountStats.map(m => {
